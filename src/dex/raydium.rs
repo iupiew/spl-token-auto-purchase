@@ -1,6 +1,12 @@
-use pinocchio::{account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey};
+use pinocchio::{
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::Seed, instruction::Signer,
+    msg, program::invoke_signed, pubkey::Pubkey,
+};
+
+use spl_token::solana_program::program_pack::Pack;
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use spl_token::state::Account as TokenAccount;
 
 use crate::{
     dex::{
@@ -22,23 +28,61 @@ struct RaydiumSwapInstruction {
     minimum_amount_out: u64,
 }
 
-/// Данные пула Raydium
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-struct RaydiumPoolInfo {
+/// Состояние AMM пула Raydium v4
+#[derive(BorshDeserialize, Debug)]
+#[repr(C)]
+pub struct AmmInfo {
     pub status: u64,
-    pub token_a_mint: Pubkey,
-    pub token_b_mint: Pubkey,
-    pub token_a_vault: Pubkey,
-    pub token_b_vault: Pubkey,
-    pub token_a_amount: u64,
-    pub token_b_amount: u64,
-    pub fees: RaydiumFees,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-struct RaydiumFees {
+    pub nonce: u64,
+    pub order_num: u64,
+    pub depth: u64,
+    pub base_decimals: u64,
+    pub quote_decimals: u64,
+    pub state: u64,
+    pub reset_flag: u64,
+    pub min_size: u64,
+    pub vol_max_cut_ratio: u64,
+    pub amount_wave_ratio: u64,
+    pub base_lot_size: u64,
+    pub quote_lot_size: u64,
+    pub min_price_multiplier: u64,
+    pub max_price_multiplier: u64,
+    pub system_decimals_value: u64,
+    pub min_separate_numerator: u64,
+    pub min_separate_denominator: u64,
     pub trade_fee_numerator: u64,
     pub trade_fee_denominator: u64,
+    pub pnl_numerator: u64,
+    pub pnl_denominator: u64,
+    pub swap_fee_numerator: u64,
+    pub swap_fee_denominator: u64,
+    pub base_need_take_pnl: u64,
+    pub quote_need_take_pnl: u64,
+    pub quote_total_pnl: u64,
+    pub base_total_pnl: u64,
+    pub pool_open_time: u64,
+    pub punish_pc_amount: u64,
+    pub punish_coin_amount: u64,
+    pub orderbook_to_init_time: u64,
+    pub swap_base_in_amount: u128,
+    pub swap_quote_out_amount: u128,
+    pub swap_base2_quote_fee: u64,
+    pub swap_quote_in_amount: u128,
+    pub swap_base_out_amount: u128,
+    pub swap_quote2_base_fee: u64,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub lp_mint: Pubkey,
+    pub open_orders: Pubkey,
+    pub market_id: Pubkey,
+    pub market_program_id: Pubkey,
+    pub target_orders: Pubkey,
+    pub withdraw_queue: Pubkey,
+    pub lp_vault: Pubkey,
+    pub owner: Pubkey,
+    pub lp_reserve: u64,
 }
 
 impl RaydiumV4 {
@@ -48,10 +92,7 @@ impl RaydiumV4 {
     }
 
     /// Загрузить информацию о пуле Raydium
-    fn load_pool_info(
-        &self,
-        pool_account: &AccountInfo,
-    ) -> Result<RaydiumPoolInfo, AutoBuyerError> {
+    fn load_amm_info(&self, pool_account: &AccountInfo) -> Result<AmmInfo, AutoBuyerError> {
         if pool_account.owner() != &constants::RAYDIUM_V4_PROGRAM_ID {
             return Err(AutoBuyerError::InvalidAccountOwner);
         }
@@ -60,26 +101,21 @@ impl RaydiumV4 {
             .try_borrow_data()
             .map_err(|_| AutoBuyerError::InvalidParameters)?;
 
-        // Упрощенная десериализация для совместимости
-        if pool_data.len() < 200 {
-            // Минимальный размер для данных пула
-            return Err(AutoBuyerError::InvalidParameters);
-        }
+        AmmInfo::try_from_slice(&pool_data).map_err(|_| AutoBuyerError::InvalidParameters)
+    }
 
-        // Создаем упрощенную структуру данных пула
-        Ok(RaydiumPoolInfo {
-            status: 1,
-            token_a_mint: constants::WSOL_MINT,
-            token_b_mint: constants::WSOL_MINT,
-            token_a_vault: constants::WSOL_MINT,
-            token_b_vault: constants::WSOL_MINT,
-            token_a_amount: 1000000,
-            token_b_amount: 1000000,
-            fees: RaydiumFees {
-                trade_fee_numerator: 25,
-                trade_fee_denominator: 10000,
-            },
-        })
+    /// Получить баланс токенов из аккаунта
+    fn get_token_balance(account_info: &AccountInfo) -> Result<u64, AutoBuyerError> {
+        let token_account = TokenAccount::unpack(
+            &account_info
+                .try_borrow_data()
+                .map_err(|_| AutoBuyerError::CpiError)?,
+        )
+        .map_err(|e| {
+            msg!("Token error: {:?}", e);
+            AutoBuyerError::CpiError
+        })?;
+        Ok(token_account.amount)
     }
 
     /// Рассчитать количество выходного токена
@@ -95,7 +131,6 @@ impl RaydiumV4 {
             return Err(AutoBuyerError::InsufficientLiquidity);
         }
 
-        // Рассчитать комиссию
         let fee_amount = amount_in
             .checked_mul(fee_numerator)
             .and_then(|x| x.checked_div(fee_denominator))
@@ -105,12 +140,9 @@ impl RaydiumV4 {
             .checked_sub(fee_amount)
             .ok_or(AutoBuyerError::MathOverflow)?;
 
-        // Формула константного произведения: x * y = k
-        // amount_out = (amount_in_after_fee * reserve_out) / (reserve_in + amount_in_after_fee)
         let numerator = amount_in_after_fee
             .checked_mul(reserve_out)
             .ok_or(AutoBuyerError::MathOverflow)?;
-
         let denominator = reserve_in
             .checked_add(amount_in_after_fee)
             .ok_or(AutoBuyerError::MathOverflow)?;
@@ -127,37 +159,100 @@ impl RaydiumV4 {
         &self,
         swap_params: &SwapParams,
     ) -> Result<Vec<u8>, AutoBuyerError> {
-        // Создать данные инструкции
         let instruction_data = RaydiumSwapInstruction {
             instruction: 9, // Raydium swap instruction
             amount_in: swap_params.amount_in,
             minimum_amount_out: swap_params.min_amount_out,
         };
-
         borsh::to_vec(&instruction_data).map_err(|_| AutoBuyerError::InvalidParameters)
     }
 
-    /// Выполнить обмен через CPI (упрощенная версия)
+    /// Выполнить обмен через CPI
     fn execute_raydium_swap(
         &self,
-        _accounts: &[AccountInfo],
+        accounts: &[AccountInfo],
         swap_params: &SwapParams,
+        program_id: &Pubkey,
     ) -> ProgramResult {
-        // Создать данные инструкции
-        let _instruction_data = self.create_swap_instruction_data(swap_params)?;
+        let instruction_data = self.create_swap_instruction_data(swap_params)?;
 
-        msg!("Raydium swap instruction data created successfully");
-        msg!(
-            "Swap details: {} -> {}",
-            swap_params.amount_in,
-            swap_params.calculation.amount_out
-        );
+        let amm_account = &accounts[6];
+        let amm_info = self.load_amm_info(amm_account)?;
 
-        // В реальной реализации здесь был бы CPI вызов к Raydium
-        // Сейчас просто логируем успех
-        msg!("Raydium CPI call would be executed here");
+        let user_account = &accounts[0];
+        let source_token_account = &accounts[1];
+        let destination_token_account = &accounts[2];
+        let raydium_program = &accounts[5];
+        let amm_authority = &accounts[11]; // PDA
+        let amm_open_orders = &accounts[12];
+        let amm_target_orders = &accounts[13];
+        let pool_token_coin_vault = &accounts[7];
+        let pool_token_pc_vault = &accounts[8];
+        let serum_program = &accounts[14];
+        let serum_market = &accounts[15];
+        let serum_bids = &accounts[16];
+        let serum_asks = &accounts[17];
+        let serum_event_queue = &accounts[18];
+        let serum_coin_vault = &accounts[19];
+        let serum_pc_vault = &accounts[20];
+        let serum_vault_signer = &accounts[21];
+        let token_program = &accounts[9];
 
-        Ok(())
+        let instruction = pinocchio::instruction::Instruction {
+            program_id: raydium_program.key(), // Remove dereference
+            accounts: &[
+                // Use slice reference instead of vec!
+                pinocchio::instruction::AccountMeta::readonly(token_program.key()),
+                pinocchio::instruction::AccountMeta::writable(amm_account.key()),
+                pinocchio::instruction::AccountMeta::readonly(amm_authority.key()),
+                pinocchio::instruction::AccountMeta::writable(amm_open_orders.key()),
+                pinocchio::instruction::AccountMeta::writable(amm_target_orders.key()),
+                pinocchio::instruction::AccountMeta::writable(pool_token_coin_vault.key()),
+                pinocchio::instruction::AccountMeta::writable(pool_token_pc_vault.key()),
+                pinocchio::instruction::AccountMeta::readonly(serum_program.key()),
+                pinocchio::instruction::AccountMeta::writable(serum_market.key()),
+                pinocchio::instruction::AccountMeta::writable(serum_bids.key()),
+                pinocchio::instruction::AccountMeta::writable(serum_asks.key()),
+                pinocchio::instruction::AccountMeta::writable(serum_event_queue.key()),
+                pinocchio::instruction::AccountMeta::writable(serum_coin_vault.key()),
+                pinocchio::instruction::AccountMeta::writable(serum_pc_vault.key()),
+                pinocchio::instruction::AccountMeta::readonly(serum_vault_signer.key()),
+                pinocchio::instruction::AccountMeta::writable(source_token_account.key()),
+                pinocchio::instruction::AccountMeta::writable(destination_token_account.key()),
+                pinocchio::instruction::AccountMeta::readonly_signer(user_account.key()),
+            ],
+            data: &instruction_data, // Use slice reference
+        };
+
+        let account_infos = [
+            // Use array of references
+            token_program,
+            amm_account,
+            amm_authority,
+            amm_open_orders,
+            amm_target_orders,
+            pool_token_coin_vault,
+            pool_token_pc_vault,
+            serum_program,
+            serum_market,
+            serum_bids,
+            serum_asks,
+            serum_event_queue,
+            serum_coin_vault,
+            serum_pc_vault,
+            serum_vault_signer,
+            source_token_account,
+            destination_token_account,
+            user_account,
+        ];
+
+        let binding = amm_info.nonce.to_le_bytes();
+        let seeds = &[
+            Seed::from(b"amm_authority".as_ref()),
+            Seed::from(binding.as_ref()),
+        ];
+
+        invoke_signed(&instruction, &account_infos, &[Signer::from(seeds)])
     }
 }
 
@@ -168,21 +263,19 @@ impl DexInterface for RaydiumV4 {
         quote_mint: &Pubkey,
         accounts: &[AccountInfo],
     ) -> Result<Option<TradingPair>, AutoBuyerError> {
-        // Проверить, есть ли информация о пуле в переданных аккаунтах
         if accounts.len() < 7 {
             return Ok(None);
         }
 
-        let pool_account = &accounts[6]; // Raydium пул
-        let pool_info = match self.load_pool_info(pool_account) {
+        let pool_account = &accounts[6];
+        let amm_info = match self.load_amm_info(pool_account) {
             Ok(info) => info,
             Err(_) => return Ok(None),
         };
 
-        // Проверить, соответствует ли пул нужным токенам
-        let is_correct_pair = (pool_info.token_a_mint == *base_mint
-            && pool_info.token_b_mint == *quote_mint)
-            || (pool_info.token_a_mint == *quote_mint && pool_info.token_b_mint == *base_mint);
+        let is_correct_pair = (amm_info.base_mint == *base_mint
+            && amm_info.quote_mint == *quote_mint)
+            || (amm_info.base_mint == *quote_mint && amm_info.quote_mint == *base_mint);
 
         if !is_correct_pair {
             return Ok(None);
@@ -190,12 +283,12 @@ impl DexInterface for RaydiumV4 {
 
         let pool_config = PoolConfig {
             pool_address: *pool_account.key(),
-            token_a_account: pool_info.token_a_vault,
-            token_b_account: pool_info.token_b_vault,
-            token_a_mint: pool_info.token_a_mint,
-            token_b_mint: pool_info.token_b_mint,
-            fee_rate: (pool_info.fees.trade_fee_numerator * constants::BASIS_POINTS as u64
-                / pool_info.fees.trade_fee_denominator) as u16,
+            token_a_account: amm_info.base_vault,
+            token_b_account: amm_info.quote_vault,
+            token_a_mint: amm_info.base_mint,
+            token_b_mint: amm_info.quote_mint,
+            fee_rate: (amm_info.trade_fee_numerator * constants::BASIS_POINTS as u64
+                / amm_info.trade_fee_denominator) as u16,
         };
 
         let trading_pair = TradingPair {
@@ -214,26 +307,29 @@ impl DexInterface for RaydiumV4 {
         accounts: &[AccountInfo],
     ) -> Result<SwapCalculation, AutoBuyerError> {
         let pool_account = &accounts[6];
-        let pool_info = self.load_pool_info(pool_account)?;
+        let amm_info = self.load_amm_info(pool_account)?;
 
-        // Определить направление обмена
+        let token_a_vault = &accounts[7];
+        let token_b_vault = &accounts[8];
+
+        let reserve_a = Self::get_token_balance(token_a_vault)?;
+        let reserve_b = Self::get_token_balance(token_b_vault)?;
+
         let (reserve_in, reserve_out) =
             if trading_pair.pool_config.token_a_mint == trading_pair.quote_mint {
-                (pool_info.token_a_amount, pool_info.token_b_amount)
+                (reserve_a, reserve_b)
             } else {
-                (pool_info.token_b_amount, pool_info.token_a_amount)
+                (reserve_b, reserve_a)
             };
 
-        // Рассчитать обмен
         let (amount_out, fee_amount) = self.calculate_amount_out(
             amount_in,
             reserve_in,
             reserve_out,
-            pool_info.fees.trade_fee_numerator,
-            pool_info.fees.trade_fee_denominator,
+            amm_info.trade_fee_numerator,
+            amm_info.trade_fee_denominator,
         )?;
 
-        // Рассчитать цену и проскальзывание
         let price_per_unit = if amount_in > 0 {
             amount_out as f64 / amount_in as f64
         } else {
@@ -258,7 +354,7 @@ impl DexInterface for RaydiumV4 {
 
     fn execute_swap(
         &self,
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
         swap_params: &SwapParams,
     ) -> ProgramResult {
@@ -268,8 +364,7 @@ impl DexInterface for RaydiumV4 {
             swap_params.calculation.amount_out
         );
 
-        // Выполнить обмен через упрощенную функцию
-        self.execute_raydium_swap(accounts, swap_params)?;
+        self.execute_raydium_swap(accounts, swap_params, program_id)?;
 
         msg!("Raydium swap completed successfully");
         Ok(())

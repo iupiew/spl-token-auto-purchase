@@ -101,9 +101,9 @@ impl Processor {
 
     /// Валидация переданных аккаунтов
     fn validate_accounts(accounts: &[AccountInfo]) -> Result<(), AutoBuyerError> {
-        if accounts.len() < 11 {
+        if accounts.len() < 22 {
             msg!(
-                "Error: Insufficient accounts provided. Expected 11, got {}",
+                "Error: Insufficient accounts provided. Expected 22, got {}",
                 accounts.len()
             );
             return Err(AutoBuyerError::InvalidParameters);

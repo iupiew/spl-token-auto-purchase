@@ -209,8 +209,6 @@ else
 	exit 1
 fi
 
----
-
 #!/bin/bash
 # verify.sh - Verification script for deployed program
 

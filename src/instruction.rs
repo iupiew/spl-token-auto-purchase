@@ -19,6 +19,17 @@ pub enum AutoBuyerInstruction {
     /// 8. `[writable]` Raydium пул токен B аккаунт
     /// 9. `[]` Программа токенов
     /// 10. `[]` Системная программа
+    /// 11. `[]` AMM authority
+    /// 12. `[writable]` AMM open orders
+    /// 13. `[writable]` AMM target orders
+    /// 14. `[]` Serum program
+    /// 15. `[writable]` Serum market
+    /// 16. `[writable]` Serum bids
+    /// 17. `[writable]` Serum asks
+    /// 18. `[writable]` Serum event queue
+    /// 19. `[writable]` Serum coin vault
+    /// 20. `[writable]` Serum pc vault
+    /// 21. `[]` Serum vault signer
     BuyToken {
         /// Сумма в токене-котировке для обмена
         amount_in: u64,
