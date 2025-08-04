@@ -1,7 +1,7 @@
 use pinocchio::program_error::ProgramError;
 use thiserror::Error;
 
-/// Перечисление ошибок автоматического покупателя токенов
+/// Перечисление ошибок
 #[derive(Error, Debug, Copy, Clone)]
 pub enum AutoBuyerError {
     /// Неверная инструкция

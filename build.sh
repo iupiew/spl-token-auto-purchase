@@ -49,7 +49,7 @@ cargo clean
 
 # Build the program
 echo -e "${YELLOW}⚙️  Building program in release mode...${NC}"
-cargo build-sbf --release
+cargo build-sbf
 
 # Check if build was successful
 if [ ! -f "$SO_FILE" ]; then

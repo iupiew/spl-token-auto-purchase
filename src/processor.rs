@@ -1,4 +1,3 @@
-// processor.rs - Fixed formatting for Pubkey
 use pinocchio::{account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey};
 
 use crate::{
@@ -146,7 +145,7 @@ impl Processor {
 
     /// Проверка баланса пользователя
     fn check_user_balance(
-        _source_account: &AccountInfo, // Fixed: prefixed with underscore
+        _source_account: &AccountInfo,
         required_amount: u64,
     ) -> Result<(), AutoBuyerError> {
         // Упрощенная проверка - предполагаем, что аккаунт валиден

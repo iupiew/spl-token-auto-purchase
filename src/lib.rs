@@ -1,4 +1,3 @@
-// lib.rs - Fixed imports and entry point
 use pinocchio::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, program_error::ProgramError,
     pubkey::Pubkey,
@@ -8,13 +7,12 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 mod dex;
 mod error;
-mod instruction;
-mod processor;
-mod state;
+pub mod instruction;
+pub mod processor;
+pub mod state;
 
 use processor::Processor;
 
-// Entry point - fixed for pinocchio
 entrypoint!(process_instruction);
 
 pub fn process_instruction(
