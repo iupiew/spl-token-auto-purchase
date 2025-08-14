@@ -17,7 +17,7 @@ use std::thread;
 use std::time::Duration;
 
 // --- CONFIGURATION ---
-const PROGRAM_ID: &str = "AEddYtP13FDjm7xB5juSsCWGhw4FT8HZKVwHZxyodvST";
+const PROGRAM_ID: &str = "9yXvLdU4zNJajJLPn9qu9f1bfou7CCJx4unvnViy7g1h";
 const DEVNET_URL: &str = "https://api.devnet.solana.com";
 
 // Your wallet address
@@ -31,7 +31,7 @@ const RAYDIUM_V4_PROGRAM_ID: &str = "675kPX9MHTjS2yt3Ws8KqJuGKKfxpHMvWqHgFCiGJk7
 
 // We will swap SOL for USDC
 const QUOTE_MINT_ADDRESS: &str = "So11111111111111111111111111111111111111112"; // WSOL
-const TARGET_MINT_ADDRESS: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC
+const TARGET_MINT_ADDRESS: &str = "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"; // USDC Devnet
 
 const SOL_TO_WRAP: u64 = 100_000_000; // 0.1 SOL (safer for testing)
 const MIN_AMOUNT_OUT: u64 = 1_000; // Minimum USDC to receive (example)
@@ -125,7 +125,7 @@ async fn test_buy_token_live() {
                 &user_wallet.pubkey(),
                 &user_wallet.pubkey(),
                 &quote_mint,
-                &spl_token::id(),
+                &spl_token::id(), // Use the standard SPL Token program ID
             ));
         }
         Ok(_) => println!("WSOL token account already exists"),
@@ -139,7 +139,7 @@ async fn test_buy_token_live() {
                 &user_wallet.pubkey(),
                 &user_wallet.pubkey(),
                 &target_mint,
-                &spl_token::id(),
+                &spl_token::id(), // Use the standard SPL Token program ID
             ));
         }
         Ok(_) => println!("USDC token account already exists"),
@@ -151,8 +151,9 @@ async fn test_buy_token_live() {
         &user_quote_ata,
         SOL_TO_WRAP,
     ));
-    setup_instructions
-        .push(token_instruction::sync_native(&spl_token::id(), &user_quote_ata).unwrap());
+    setup_instructions.push(
+        token_instruction::sync_native(&spl_token::id(), &user_quote_ata).unwrap(), // Use standard SPL Token program ID
+    );
 
     if !setup_instructions.is_empty() {
         let recent_blockhash = rpc_client.get_latest_blockhash().await.unwrap();
@@ -168,6 +169,9 @@ async fn test_buy_token_live() {
             Ok(sig) => println!("Setup transaction successful! Signature: {}", sig),
             Err(e) => panic!("Setup transaction failed: {}", e),
         }
+
+        // Wait a moment for the transaction to be processed
+        thread::sleep(Duration::from_secs(2));
     }
 
     // 3. EXECUTE THE SWAP
