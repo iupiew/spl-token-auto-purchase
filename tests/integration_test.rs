@@ -71,8 +71,7 @@ async fn test_buy_token_live() {
         }
         Err(e) => {
             println!(
-                "Failed to load wallet keypair from {}: {}",
-                WALLET_KEYPAIR_PATH, e
+                "Failed to load wallet keypair from {WALLET_KEYPAIR_PATH}: {e}"
             );
             println!("Please make sure the path is correct and the file contains your keypair in JSON format.");
             println!("You can export your keypair using: solana config get keypair");
@@ -82,14 +81,14 @@ async fn test_buy_token_live() {
 
     println!("-----------------------------------------------------------------");
     println!("Using wallet: {}", user_wallet.pubkey());
-    println!("Testing on devnet: {}", DEVNET_URL);
+    println!("Testing on devnet: {DEVNET_URL}");
     println!("-----------------------------------------------------------------");
 
     // Check current balance
     match rpc_client.get_balance(&user_wallet.pubkey()).await {
         Ok(balance) => {
             let sol_balance = balance as f64 / 1_000_000_000.0;
-            println!("Current wallet balance: {} SOL", sol_balance);
+            println!("Current wallet balance: {sol_balance} SOL");
 
             if balance < SOL_TO_WRAP * 2 {
                 println!("⚠️  Warning: Low balance!");
@@ -102,7 +101,7 @@ async fn test_buy_token_live() {
             }
         }
         Err(e) => {
-            println!("Error checking wallet balance: {}", e);
+            println!("Error checking wallet balance: {e}");
             panic!("Could not check wallet balance");
         }
     }
@@ -166,8 +165,8 @@ async fn test_buy_token_live() {
 
         println!("Setting up token accounts...");
         match rpc_client.send_and_confirm_transaction(&setup_tx).await {
-            Ok(sig) => println!("Setup transaction successful! Signature: {}", sig),
-            Err(e) => panic!("Setup transaction failed: {}", e),
+            Ok(sig) => println!("Setup transaction successful! Signature: {sig}"),
+            Err(e) => panic!("Setup transaction failed: {e}"),
         }
 
         // Wait a moment for the transaction to be processed
@@ -219,13 +218,13 @@ async fn test_buy_token_live() {
         Ok(sig) => {
             println!("-----------------------------------------------------------------");
             println!("✅ SWAP SUCCESSFUL!");
-            println!("Transaction Signature: {}", sig);
+            println!("Transaction Signature: {sig}");
             println!("-----------------------------------------------------------------");
         }
         Err(e) => {
             println!("-----------------------------------------------------------------");
             println!("❌ SWAP FAILED (Expected - using placeholder addresses)!");
-            println!("Error: {}", e);
+            println!("Error: {e}");
             println!("This is expected since we're using placeholder pool addresses.");
             println!("The test successfully created token accounts and submitted the transaction.");
             println!("-----------------------------------------------------------------");
@@ -240,14 +239,13 @@ async fn test_buy_token_live() {
 
     match rpc_client.get_token_account_balance(&user_quote_ata).await {
         Ok(balance) => println!("WSOL balance: {} tokens", balance.ui_amount_string),
-        Err(e) => println!("Error getting WSOL balance: {}", e),
+        Err(e) => println!("Error getting WSOL balance: {e}"),
     }
 
     match rpc_client.get_token_account_balance(&user_target_ata).await {
         Ok(balance) => println!("USDC balance: {} tokens", balance.ui_amount_string),
-        Err(e) => println!("Error getting USDC balance: {}", e),
+        Err(e) => println!("Error getting USDC balance: {e}"),
     }
 
     println!("Test completed successfully!");
 }
-

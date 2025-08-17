@@ -1,6 +1,7 @@
 use crate::state::{SwapCalculation, TradingPair};
 
 /// Поддерживаемые провайдеры DEX
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DexProvider {
     RaydiumV4,
@@ -13,6 +14,7 @@ pub enum DexProvider {
 #[derive(Debug, Clone)]
 pub struct SwapParams {
     /// Торговая пара
+    #[allow(dead_code)]
     pub trading_pair: TradingPair,
     /// Количество входного токена
     pub amount_in: u64,
@@ -23,6 +25,7 @@ pub struct SwapParams {
 }
 
 /// Информация о ликвидности пула
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PoolLiquidity {
     /// Резерв токена A
@@ -34,6 +37,7 @@ pub struct PoolLiquidity {
 }
 
 /// Результат поиска пула
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PoolSearchResult {
     /// Найденная торговая пара
@@ -46,6 +50,7 @@ pub struct PoolSearchResult {
 
 impl PoolSearchResult {
     /// Рассчитать рейтинг пула на основе ликвидности и других факторов
+    #[allow(dead_code)]
     pub fn calculate_score(&mut self) {
         // Простой алгоритм оценки: чем больше ликвидность, тем выше рейтинг
         let total_liquidity = self
@@ -55,3 +60,4 @@ impl PoolSearchResult {
         self.score = total_liquidity as f64;
     }
 }
+

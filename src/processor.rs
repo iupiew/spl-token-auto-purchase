@@ -79,9 +79,8 @@ impl Processor {
                 amount_in,
                 min_amount_out,
             )
-            .map_err(|e| {
+            .inspect_err(|&e| {
                 msg!("Swap failed: {:?}", e);
-                e
             })?;
 
         // Создание результата без времени (упрощенная версия)

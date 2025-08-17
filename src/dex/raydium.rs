@@ -9,10 +9,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use spl_token::state::Account as TokenAccount;
 
 use crate::{
-    dex::{
-        types::{DexProvider, SwapParams},
-        DexInterface,
-    },
+    dex::{types::SwapParams, DexInterface},
     error::AutoBuyerError,
     state::{constants, PoolConfig, SwapCalculation, TradingPair},
 };
@@ -172,7 +169,7 @@ impl RaydiumV4 {
         &self,
         accounts: &[AccountInfo],
         swap_params: &SwapParams,
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
     ) -> ProgramResult {
         let instruction_data = self.create_swap_instruction_data(swap_params)?;
 
@@ -368,9 +365,5 @@ impl DexInterface for RaydiumV4 {
 
         msg!("Raydium swap completed successfully");
         Ok(())
-    }
-
-    fn provider_type(&self) -> DexProvider {
-        DexProvider::RaydiumV4
     }
 }

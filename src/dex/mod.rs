@@ -8,7 +8,7 @@ use crate::{
     state::{SwapCalculation, TradingPair},
 };
 
-use self::types::{DexProvider, SwapParams};
+use self::types::SwapParams;
 
 /// Трейт для взаимодействия с DEX
 pub trait DexInterface {
@@ -35,9 +35,6 @@ pub trait DexInterface {
         accounts: &[AccountInfo],
         swap_params: &SwapParams,
     ) -> ProgramResult;
-
-    /// Получить тип провайдера
-    fn provider_type(&self) -> DexProvider;
 }
 
 /// Менеджер DEX для выбора подходящего провайдера
@@ -48,8 +45,7 @@ pub struct DexManager {
 impl DexManager {
     /// Создать новый менеджер DEX
     pub fn new() -> Self {
-        let mut providers: Vec<Box<dyn DexInterface>> = Vec::new();
-        providers.push(Box::new(raydium::RaydiumV4::new()));
+        let providers: Vec<Box<dyn DexInterface>> = vec![Box::new(raydium::RaydiumV4::new())];
 
         Self { providers }
     }

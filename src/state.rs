@@ -1,4 +1,3 @@
-// state.rs - Fixed constants
 use borsh::{BorshDeserialize, BorshSerialize};
 use pinocchio::pubkey::Pubkey;
 
