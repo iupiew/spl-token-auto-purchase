@@ -51,6 +51,18 @@ To deploy the project to devnet, run the following command:
 solana config set --url devnet && solana program deploy target/deploy/spl_token_auto_purchase.so
 ```
 
+## TODO
+
+- [ ] Migrate from `borsh` to `bytemuck` for account data serialization
+  - [ ] Update instruction data structures with `#[repr(C)]`, `Pod`, and `Zeroable`
+  - [ ] Refactor account state structs to use `bytemuck`
+  - [ ] Add proper padding for alignment
+  - [ ] Update deserialization logic to use `bytemuck::from_bytes()`
+- [ ] Remove `serde_json` dependency (not needed for on-chain programs)
+- [ ] Replace `thiserror` with `num-derive` for lighter error handling
+  - [ ] Convert error enums to use `#[derive(FromPrimitive)]`
+  - [ ] Update error handling to use numeric error codes
+
 ## Contributing
 
 Contributions are welcome! Please feel free to open an issue or submit a pull request.

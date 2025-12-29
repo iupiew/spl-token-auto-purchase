@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Automatic SPL token buyer smart contract for Solana"
 license = "MIT"
-repository = "https://github.com/your-username/solana-auto-token-buyer"
+repository = "https://github.com/iupiew/solana-auto-token-buyer"
 
 [lib]
 crate-type = ["cdylib", "lib"]
