@@ -10,10 +10,18 @@ on:
 jobs:
   build-sbf:
     runs-on: ubuntu-latest
+    container:
+      image: anzaxyz/agave:v1.18.26
     steps:
       - uses: actions/checkout@v4
         with:
           path: .
+
+      - name: Install cargo in container
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          source $HOME/.cargo/env
+          rustup target add bpfel-unknown-unknown
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -24,33 +32,9 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Cache Solana platform tools
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/solana
-          key: ${{ runner.os }}-solana-platform-tools-v1.57
-
-      - name: Download and install platform tools v1.57
-        run: |
-          mkdir -p ~/.cache/solana/v1.57/platform-tools
-          cd ~/.cache/solana/v1.57/platform-tools
-          # Download platform tools directly from GitHub releases
-          wget -q "https://github.com/solana-labs/platform-tools/releases/download/v1.57/platform-tools-linux-x86_64.tar.bz2" -O platform-tools.tar.bz2
-          tar -xjf platform-tools.tar.bz2
-          rm platform-tools.tar.bz2
-          echo "$HOME/.cache/solana/v1.57/platform-tools/rust/bin" >> $GITHUB_PATH
-
-      - name: Install Solana CLI (for cargo-build-sbf)
-        run: |
-          # Install minimal Solana CLI to get cargo-build-sbf
-          sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)" || true
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
       - name: Build SBF
-        env:
-          RUSTC: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/rustc
-          CARGO: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/cargo
         run: |
+          source $HOME/.cargo/env
           cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
