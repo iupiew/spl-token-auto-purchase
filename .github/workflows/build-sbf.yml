@@ -43,7 +43,7 @@ jobs:
           PATH: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin:/home/runner/.local/share/solana/install/active_release/bin:/usr/bin:/usr/local/bin
         run: |
           rm -f Cargo.lock
-          cargo build --target bpfel-unknown-unknown --release
+          cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
