@@ -40,7 +40,7 @@ jobs:
 
       - name: Build SBF
         env:
-          PATH: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin:/home/runner/.local/share/solana/install/active_release/bin:${{ env.PATH }}
+          PATH: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin:/home/runner/.local/share/solana/install/active_release/bin:/usr/bin:/usr/local/bin
         run: |
           rm -f Cargo.lock
           cargo build --target bpfel-unknown-unknown --release
