@@ -15,8 +15,8 @@ jobs:
         with:
           path: .
 
-      - name: Install Rust toolchain (1.80+ for lock file v4 support)
-        uses: dtolnay/rust-toolchain@1.80
+      - name: Install Rust 1.80+ (for lock file v4 support)
+        uses: dtolnay/rust-toolchain@1.82
         with:
           target: bpfel-unknown-unknown
 
@@ -41,6 +41,14 @@ jobs:
           done
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
+      - name: Download platform tools v1.57
+        run: |
+          mkdir -p ~/.cache/solana/v1.57/platform-tools
+          cd ~/.cache/solana/v1.57/platform-tools
+          wget -q "https://github.com/solana-labs/platform-tools/releases/download/v1.57/platform-tools-linux-x86_64.tar.bz2" -O platform-tools.tar.bz2
+          tar -xjf platform-tools.tar.bz2
+          rm platform-tools.tar.bz2
+
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -51,12 +59,16 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build SBF
+        env:
+          RUSTC: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/rustc
+          CARGO: ${{ runner.home }}/.cargo/bin/cargo
+          PATH: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin:${{ env.PATH }}
         run: |
-          cargo build-sbf --arch sbfv2
+          cargo build --target bpfel-unknown-unknown --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spl-token-auto-purchase-so
-          path: target/deploy/spl_token_auto_purchase.so
+          path: target/bpfel-unknown-unknown/release/spl_token_auto_purchase.so
           retention-days: 7
