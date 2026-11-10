@@ -10,6 +10,9 @@ on:
 jobs:
   build-sbf:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spl-token-auto-purchase
     steps:
       - uses: actions/checkout@v4
 
@@ -21,7 +24,14 @@ jobs:
 
       - name: Install Solana CLI (Agave v1.18.26) with platform tools
         run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)"
+          # Try multiple mirrors for Solana install
+          for i in {1..3}; do
+            if sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)"; then
+              break
+            fi
+            echo "Retry $i/3..."
+            sleep 10
+          done
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Cache cargo
@@ -35,7 +45,6 @@ jobs:
 
       - name: Build SBF
         run: |
-          cd spl-token-auto-purchase
           cargo build-sbf --arch v3
 
       - name: Upload artifact
