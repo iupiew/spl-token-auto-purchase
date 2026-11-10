@@ -55,15 +55,14 @@ jobs:
 
       - name: Build SBF
         env:
-          RUSTC: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/rustc
-          CARGO: /home/runner/.cargo/bin/cargo
+          CARGO_LOCKED: 1
         run: |
           rm -f Cargo.lock
-          cargo build --target bpfel-unknown-unknown --release
+          cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spl-token-auto-purchase-so
-          path: target/bpfel-unknown-unknown/release/spl_token_auto_purchase.so
+          path: target/deploy/spl_token_auto_purchase.so
           retention-days: 7
