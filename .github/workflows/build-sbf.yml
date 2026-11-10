@@ -40,6 +40,8 @@ jobs:
 
       - name: Build SBF
         run: |
+          # Regenerate Cargo.lock with platform tools cargo to avoid version mismatch
+          cargo generate-lockfile
           cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
