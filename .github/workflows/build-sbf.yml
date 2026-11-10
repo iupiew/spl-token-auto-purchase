@@ -40,9 +40,9 @@ jobs:
 
       - name: Build SBF
         run: |
-          # Remove Cargo.lock to force regeneration with platform tools cargo
+          # Use platform tools cargo directly to build for SBF target
           rm -f Cargo.lock
-          cargo build-sbf --arch sbfv2
+          cargo build --target bpfel-unknown-unknown --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
