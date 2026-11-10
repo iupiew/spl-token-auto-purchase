@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: .
 
       - name: Cache Solana platform tools
         uses: actions/cache@v4
@@ -42,12 +44,11 @@ jobs:
 
       - name: Build SBF
         run: |
-          cd spl-token-auto-purchase
           cargo build-sbf --arch v3
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spl-token-auto-purchase-so
-          path: spl-token-auto-purchase/target/deploy/spl_token_auto_purchase.so
+          path: target/deploy/spl_token_auto_purchase.so
           retention-days: 7
