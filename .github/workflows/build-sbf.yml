@@ -15,6 +15,11 @@ jobs:
         with:
           path: .
 
+      - name: Install Rust toolchain (1.80+ for lock file v4 support)
+        uses: dtolnay/rust-toolchain@1.80
+        with:
+          target: bpfel-unknown-unknown
+
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -27,7 +32,6 @@ jobs:
       - name: Install Solana CLI (Agave v1.18.26)
         run: |
           sudo apt-get update && sudo apt-get install -y curl
-          # Retry install to handle transient network issues
           for i in {1..3}; do
             if sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)"; then
               break
@@ -48,7 +52,6 @@ jobs:
 
       - name: Build SBF
         run: |
-          rm -f Cargo.lock
           cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
