@@ -15,11 +15,6 @@ jobs:
         with:
           path: .
 
-      - name: Install Rust 1.80+ (for lock file v4 support)
-        uses: dtolnay/rust-toolchain@1.82
-        with:
-          target: bpfel-unknown-unknown
-
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -61,9 +56,9 @@ jobs:
       - name: Build SBF
         env:
           RUSTC: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/rustc
-          CARGO: ${{ runner.home }}/.cargo/bin/cargo
-          PATH: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin:${{ env.PATH }}
+          CARGO: /home/runner/.cargo/bin/cargo
         run: |
+          rm -f Cargo.lock
           cargo build --target bpfel-unknown-unknown --release
 
       - name: Upload artifact
