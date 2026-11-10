@@ -10,22 +10,32 @@ on:
 jobs:
   build-sbf:
     runs-on: ubuntu-latest
-    container:
-      image: anzaxyz/agave:v1.18.26
     steps:
       - uses: actions/checkout@v4
         with:
           path: .
 
-      - name: Install build dependencies
-        run: |
-          apt-get update && apt-get install -y curl git pkg-config libssl-dev
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Rust toolchain
+      - name: Install Solana CLI (Agave v1.18.26)
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-          source $HOME/.cargo/env
-          rustup target add bpfel-unknown-unknown
+          sudo apt-get update && sudo apt-get install -y curl
+          # Retry install to handle transient network issues
+          for i in {1..3}; do
+            if sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)"; then
+              break
+            fi
+            echo "Retry $i/3..."
+            sleep 15
+          done
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -38,7 +48,7 @@ jobs:
 
       - name: Build SBF
         run: |
-          source $HOME/.cargo/env
+          rm -f Cargo.lock
           cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
