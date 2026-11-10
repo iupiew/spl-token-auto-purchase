@@ -39,8 +39,9 @@ jobs:
           key: ${{ runner.os }}-solana-platform-tools-v1.57
 
       - name: Build SBF
+        env:
+          PATH: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin:/home/runner/.local/share/solana/install/active_release/bin:${{ env.PATH }}
         run: |
-          # Use platform tools cargo directly to build for SBF target
           rm -f Cargo.lock
           cargo build --target bpfel-unknown-unknown --release
 
