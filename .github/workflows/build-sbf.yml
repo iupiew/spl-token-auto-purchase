@@ -24,26 +24,26 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          target: bpfel-unknown-unknown
-
       - name: Cache Solana platform tools
         uses: actions/cache@v4
         with:
           path: ~/.cache/solana
           key: ${{ runner.os }}-solana-platform-tools-v1.57
 
-      - name: Install Solana CLI (Agave v1.18.26)
+      - name: Download and install platform tools v1.57
         run: |
-          for i in {1..3}; do
-            if sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)"; then
-              break
-            fi
-            echo "Retry $i/3..."
-            sleep 10
-          done
+          mkdir -p ~/.cache/solana/v1.57/platform-tools
+          cd ~/.cache/solana/v1.57/platform-tools
+          # Download platform tools directly from GitHub releases
+          wget -q "https://github.com/solana-labs/platform-tools/releases/download/v1.57/platform-tools-linux-x86_64.tar.bz2" -O platform-tools.tar.bz2
+          tar -xjf platform-tools.tar.bz2
+          rm platform-tools.tar.bz2
+          echo "$HOME/.cache/solana/v1.57/platform-tools/rust/bin" >> $GITHUB_PATH
+
+      - name: Install Solana CLI (for cargo-build-sbf)
+        run: |
+          # Install minimal Solana CLI to get cargo-build-sbf
+          sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)" || true
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Build SBF
