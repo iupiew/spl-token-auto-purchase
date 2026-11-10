@@ -48,7 +48,7 @@ jobs:
 
       - name: Build SBF
         run: |
-          cargo build-sbf --arch v3
+          cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
