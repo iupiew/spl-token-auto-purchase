@@ -47,6 +47,9 @@ jobs:
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Build SBF
+        env:
+          RUSTC: ${{ runner.home }}/.cache/solana/v1.57/platform-tools/rust/bin/rustc
+          CARGO: ${{ runner.home }}/.cache/solana/v1.57/platform-tools/rust/bin/cargo
         run: |
           cargo build-sbf --arch sbfv2
 
