@@ -13,10 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Solana platform tools
+        uses: actions/cache@v4
         with:
-          target: bpfel-unknown-unknown
+          path: ~/.cache/solana
+          key: ${{ runner.os }}-solana-platform-tools-v1.57
+
+      - name: Install Solana CLI (Agave v1.18.26) with platform tools
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -26,11 +32,6 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install Solana CLI (Agave v1.18.26)
-        run: |
-          sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
       - name: Build SBF
         run: |
