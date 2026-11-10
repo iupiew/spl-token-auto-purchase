@@ -1,9 +1,7 @@
 #![allow(unexpected_cfgs)]
 
-use borsh::BorshDeserialize;
 use pinocchio::{
-    account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, pubkey::Pubkey,
 };
 
 mod dex;
@@ -21,7 +19,6 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    let instruction = instruction::AutoBuyerInstruction::try_from_slice(instruction_data)
-        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    let instruction = instruction::AutoBuyerInstruction::unpack(instruction_data)?;
     Processor::process(program_id, accounts, instruction)
 }

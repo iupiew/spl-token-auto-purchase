@@ -1,53 +1,31 @@
 use pinocchio::program_error::ProgramError;
-use thiserror::Error;
 
-/// Перечисление ошибок
-#[derive(Error, Debug, Copy, Clone)]
+/// Program error codes
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AutoBuyerError {
-    /// Неверная инструкция
-    #[error("Invalid instruction")]
-    InvalidInstruction,
+    InvalidInstruction = 0,
+    InsufficientFunds = 1,
+    InsufficientLiquidity = 2,
+    SlippageTooHigh = 3,
+    PoolNotFound = 4,
+    InvalidParameters = 5,
+    InvalidAccountOwner = 6,
+    MathOverflow = 7,
+    CpiError = 8,
+    TokenNotSupported = 9,
+}
 
-    /// Недостаточные средства
-    #[error("Insufficient funds")]
-    InsufficientFunds,
-
-    /// Недостаточная ликвидность
-    #[error("Insufficient liquidity")]
-    InsufficientLiquidity,
-
-    /// Проскальзывание слишком велико
-    #[error("Slippage too high")]
-    SlippageTooHigh,
-
-    /// Пул не найден
-    #[error("Pool not found")]
-    PoolNotFound,
-
-    /// Неверные параметры
-    #[error("Invalid parameters")]
-    InvalidParameters,
-
-    /// Неверный владелец аккаунта
-    #[error("Invalid account owner")]
-    InvalidAccountOwner,
-
-    /// Математическое переполнение
-    #[error("Math overflow")]
-    MathOverflow,
-
-    /// Ошибка CPI
-    #[error("CPI error")]
-    CpiError,
-
-    /// Токен не поддерживается
-    #[error("Token not supported")]
-    TokenNotSupported,
+impl AutoBuyerError {
+    /// Convert to program error
+    pub fn into_program_error(self) -> ProgramError {
+        ProgramError::Custom(self as u32)
+    }
 }
 
 impl From<AutoBuyerError> for ProgramError {
     fn from(e: AutoBuyerError) -> Self {
-        ProgramError::Custom(e as u32)
+        e.into_program_error()
     }
 }
 

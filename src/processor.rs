@@ -64,7 +64,7 @@ impl Processor {
         msg!("Min amount out: {}", min_amount_out);
 
         // Проверка баланса пользователя
-        Self::check_user_balance(source_token_account, amount_in)?;
+        Self::check_user_balance(source_token_account, amount_in, quote_mint.key(), user_account.key())?;
 
         // Создание менеджера DEX
         let dex_manager = DexManager::new();
@@ -144,12 +144,44 @@ impl Processor {
 
     /// Проверка баланса пользователя
     fn check_user_balance(
-        _source_account: &AccountInfo,
+        source_account: &AccountInfo,
         required_amount: u64,
+        expected_mint: &Pubkey,
+        expected_owner: &Pubkey,
     ) -> Result<(), AutoBuyerError> {
-        // Упрощенная проверка - предполагаем, что аккаунт валиден
-        // В реальной реализации здесь был бы анализ данных токенового аккаунта
-        msg!("Balance check passed. Required: {}", required_amount);
+        let data = source_account
+            .try_borrow_data()
+            .map_err(|_| AutoBuyerError::CpiError)?;
+
+        // pinocchio_token::state::Account layout:
+        // mint (32) + owner (32) + amount (8) + ...
+        if data.len() < 72 {
+            return Err(AutoBuyerError::InvalidParameters);
+        }
+
+        // Verify mint matches expected quote mint
+        let mint_bytes: [u8; 32] = data[0..32].try_into().unwrap();
+        if Pubkey::from(mint_bytes) != *expected_mint {
+            msg!("Source account mint mismatch");
+            return Err(AutoBuyerError::InvalidParameters);
+        }
+
+        // Verify owner/authority matches signer
+        let owner_bytes: [u8; 32] = data[32..64].try_into().unwrap();
+        if Pubkey::from(owner_bytes) != *expected_owner {
+            msg!("Source account owner mismatch");
+            return Err(AutoBuyerError::InvalidAccountOwner);
+        }
+
+        // Check amount
+        let amount_bytes: [u8; 8] = data[64..72].try_into().unwrap();
+        let amount = u64::from_le_bytes(amount_bytes);
+
+        if amount < required_amount {
+            msg!("Insufficient balance: have {}, need {}", amount, required_amount);
+            return Err(AutoBuyerError::InsufficientFunds);
+        }
+
         Ok(())
     }
 
@@ -163,8 +195,10 @@ impl Processor {
         msg!("Amount Out: {}", result.amount_out);
         msg!("Fee Paid: {}", result.fee_paid);
         msg!("Timestamp: {}", result.timestamp);
-        msg!("Price per Unit: {:.6}", swap_calculation.price_per_unit);
-        msg!("Slippage: {:.2}%", swap_calculation.slippage_percent);
+        // price_per_unit is fixed-point scaled by 1e9
+        msg!("Price per Unit: {}.{:09}", swap_calculation.price_per_unit / 1_000_000_000, swap_calculation.price_per_unit % 1_000_000_000);
+        // slippage_bps is in basis points (10000 = 100%)
+        msg!("Slippage: {}.{:02}%", swap_calculation.slippage_bps / 100, swap_calculation.slippage_bps % 100);
         msg!("========================");
     }
 }

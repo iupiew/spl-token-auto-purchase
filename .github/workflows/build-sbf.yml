@@ -1,0 +1,45 @@
+name: Build SBF
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-sbf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: bpfel-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Solana CLI (Agave v1.18.26)
+        run: |
+          sh -c "$(curl -sSfL https://release.solana.com/v1.18.26/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Build SBF
+        run: |
+          cd spl-token-auto-purchase
+          cargo build-sbf --arch v3
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spl-token-auto-purchase-so
+          path: target/deploy/spl_token_auto_purchase.so
+          retention-days: 7
