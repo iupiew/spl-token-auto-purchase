@@ -48,8 +48,8 @@ jobs:
 
       - name: Build SBF
         env:
-          RUSTC: $HOME/.cache/solana/v1.57/platform-tools/rust/bin/rustc
-          CARGO: $HOME/.cache/solana/v1.57/platform-tools/rust/bin/cargo
+          RUSTC: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/rustc
+          CARGO: /home/runner/.cache/solana/v1.57/platform-tools/rust/bin/cargo
         run: |
           cargo build-sbf --arch sbfv2
 
