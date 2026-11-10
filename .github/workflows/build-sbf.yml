@@ -32,8 +32,7 @@ jobs:
 
       - name: Build SBF
         run: |
-          rm -f Cargo.lock
-          cargo build-sbf --arch sbfv2
+          cargo build-sbf --arch sbfv2 --locked
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
