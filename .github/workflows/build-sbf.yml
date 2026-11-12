@@ -26,7 +26,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/solana
-          key: ${{ runner.os }}-solana-platform-tools-v1.57
+          key: ${{ runner.os }}-solana-platform-tools-v1.58
+
+      - name: Download platform tools v1.58
+        run: |
+          mkdir -p ~/.cache/solana/v1.58/platform-tools
+          cd ~/.cache/solana/v1.58/platform-tools
+          wget -q "https://github.com/solana-labs/platform-tools/releases/download/v1.58/platform-tools-linux-x86_64.tar.bz2" -O platform-tools.tar.bz2
+          tar -xjf platform-tools.tar.bz2
+          rm platform-tools.tar.bz2
 
       - name: Install Solana CLI (Agave v1.18.26)
         run: |
