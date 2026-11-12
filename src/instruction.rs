@@ -44,7 +44,10 @@ impl AutoBuyerInstruction {
     /// Pack instruction into bytes (1 byte discriminator + 2 u64 LE = 17 bytes)
     pub fn pack(&self) -> [u8; 17] {
         match self {
-            Self::BuyToken { amount_in, min_amount_out } => {
+            Self::BuyToken {
+                amount_in,
+                min_amount_out,
+            } => {
                 let mut data = [0u8; 17];
                 data[0] = INSTRUCTION_BUY_TOKEN;
                 data[1..9].copy_from_slice(&amount_in.to_le_bytes());
@@ -65,7 +68,10 @@ impl AutoBuyerInstruction {
         }
         let amount_in = u64::from_le_bytes(input[1..9].try_into().unwrap());
         let min_amount_out = u64::from_le_bytes(input[9..17].try_into().unwrap());
-        Ok(Self::BuyToken { amount_in, min_amount_out })
+        Ok(Self::BuyToken {
+            amount_in,
+            min_amount_out,
+        })
     }
 }
 
@@ -96,9 +102,12 @@ mod tests {
         };
         let packed = instruction.pack();
         let unpacked = AutoBuyerInstruction::unpack(&packed).unwrap();
-        
+
         match unpacked {
-            AutoBuyerInstruction::BuyToken { amount_in, min_amount_out } => {
+            AutoBuyerInstruction::BuyToken {
+                amount_in,
+                min_amount_out,
+            } => {
                 assert_eq!(amount_in, 1_000_000_000);
                 assert_eq!(min_amount_out, 500_000);
             }
@@ -109,7 +118,9 @@ mod tests {
     fn test_instruction_unpack_truncated_input() {
         let short_input = [0u8; 16];
         let result = AutoBuyerInstruction::unpack(&short_input);
-        assert!(matches!(result, Err(ProgramError::Custom(code)) if code == AutoBuyerError::InvalidInstruction as u32));
+        assert!(
+            matches!(result, Err(ProgramError::Custom(code)) if code == AutoBuyerError::InvalidInstruction as u32)
+        );
     }
 
     #[test]
@@ -117,7 +128,9 @@ mod tests {
         let mut input = [0u8; 17];
         input[0] = 255; // Invalid discriminator
         let result = AutoBuyerInstruction::unpack(&input);
-        assert!(matches!(result, Err(ProgramError::Custom(code)) if code == AutoBuyerError::InvalidInstruction as u32));
+        assert!(
+            matches!(result, Err(ProgramError::Custom(code)) if code == AutoBuyerError::InvalidInstruction as u32)
+        );
     }
 
     #[test]
@@ -126,7 +139,10 @@ mod tests {
         let result = AutoBuyerInstruction::unpack(&input);
         assert!(result.is_ok());
         match result.unwrap() {
-            AutoBuyerInstruction::BuyToken { amount_in, min_amount_out } => {
+            AutoBuyerInstruction::BuyToken {
+                amount_in,
+                min_amount_out,
+            } => {
                 assert_eq!(amount_in, 0);
                 assert_eq!(min_amount_out, 0);
             }
@@ -140,14 +156,20 @@ mod tests {
             min_amount_out: 0xFEDCBA9876543210,
         };
         let packed = instruction.pack();
-        
+
         // Check discriminator
         assert_eq!(packed[0], 0);
-        
+
         // Check amount_in (little-endian)
-        assert_eq!(u64::from_le_bytes(packed[1..9].try_into().unwrap()), 0x123456789ABCDEF0);
-        
+        assert_eq!(
+            u64::from_le_bytes(packed[1..9].try_into().unwrap()),
+            0x123456789ABCDEF0
+        );
+
         // Check min_amount_out (little-endian)
-        assert_eq!(u64::from_le_bytes(packed[9..17].try_into().unwrap()), 0xFEDCBA9876543210);
+        assert_eq!(
+            u64::from_le_bytes(packed[9..17].try_into().unwrap()),
+            0xFEDCBA9876543210
+        );
     }
 }

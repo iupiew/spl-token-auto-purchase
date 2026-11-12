@@ -10,9 +10,9 @@ use crate::{
 
 use self::types::SwapParams;
 
-/// Трейт для взаимодействия с DEX
+/// Trait for interacting with DEX
 pub trait DexInterface {
-    /// Найти торговую пару
+    /// Find trading pair
     fn find_trading_pair(
         &self,
         base_mint: &Pubkey,
@@ -20,7 +20,7 @@ pub trait DexInterface {
         accounts: &[AccountInfo],
     ) -> Result<Option<TradingPair>, AutoBuyerError>;
 
-    /// Рассчитать обмен
+    /// Calculate swap
     fn calculate_swap(
         &self,
         trading_pair: &TradingPair,
@@ -28,7 +28,7 @@ pub trait DexInterface {
         accounts: &[AccountInfo],
     ) -> Result<SwapCalculation, AutoBuyerError>;
 
-    /// Выполнить обмен
+    /// Execute swap
     fn execute_swap(
         &self,
         program_id: &Pubkey,
@@ -37,20 +37,25 @@ pub trait DexInterface {
     ) -> ProgramResult;
 }
 
-/// Менеджер DEX для выбора подходящего провайдера
+/// DEX manager for selecting appropriate provider
 pub struct DexManager {
     providers: Vec<Box<dyn DexInterface>>,
 }
 
-impl DexManager {
-    /// Создать новый менеджер DEX
-    pub fn new() -> Self {
-        let providers: Vec<Box<dyn DexInterface>> = vec![Box::new(raydium::RaydiumV4::new())];
-
+impl Default for DexManager {
+    fn default() -> Self {
+        let providers: Vec<Box<dyn DexInterface>> = vec![Box::new(raydium::RaydiumV4)];
         Self { providers }
     }
+}
 
-    /// Найти лучшую торговую пару среди всех DEX
+impl DexManager {
+    /// Create new DEX manager
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Find best trading pair among all DEX providers
     pub fn find_best_trading_pair(
         &self,
         base_mint: &Pubkey,
@@ -68,7 +73,7 @@ impl DexManager {
         Err(AutoBuyerError::PoolNotFound)
     }
 
-    /// Выполнить автоматический обмен
+    /// Execute automatic swap
     pub fn execute_auto_swap(
         &self,
         program_id: &Pubkey,
@@ -78,24 +83,24 @@ impl DexManager {
         amount_in: u64,
         min_amount_out: u64,
     ) -> Result<SwapCalculation, AutoBuyerError> {
-        // Найти лучшую торговую пару
+        // Find best trading pair
         let (trading_pair, provider) =
             self.find_best_trading_pair(base_mint, quote_mint, accounts)?;
 
-        // Рассчитать обмен
+        // Calculate swap
         let calculation = provider.calculate_swap(&trading_pair, amount_in, accounts)?;
 
-        // Проверить проскальзывание
+        // Check slippage
         if calculation.amount_out < min_amount_out {
             return Err(AutoBuyerError::SlippageTooHigh);
         }
 
-        // Выполнить обмен
+        // Execute swap
         let swap_params = SwapParams {
             trading_pair,
             amount_in,
             min_amount_out,
-            calculation: calculation.clone(),
+            calculation,
         };
 
         provider

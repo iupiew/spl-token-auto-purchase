@@ -387,6 +387,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "base58"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6107fe1be6682a68940da878d9e9f5e90ca5745b3dec9fd1bb393c8777d4f581"
+
+[[package]]
 name = "base64"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5036,12 +5042,16 @@ dependencies = [
 name = "spl-token-auto-purchase"
 version = "0.1.0"
 dependencies = [
+ "base58",
+ "base64 0.21.7",
  "pinocchio 0.4.0",
  "pinocchio-token",
+ "serde_json",
  "solana-client",
  "solana-program-test",
  "solana-sdk",
  "spl-associated-token-account",
+ "spl-token",
  "tokio",
 ]
 

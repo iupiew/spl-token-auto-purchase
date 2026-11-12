@@ -7,11 +7,11 @@ use crate::{
     state::constants,
 };
 
-/// Основной процессор инструкций
+/// Main instruction processor
 pub struct Processor;
 
 impl Processor {
-    /// Обработать инструкцию
+    /// Process instruction
     pub fn process(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
@@ -28,14 +28,14 @@ impl Processor {
         }
     }
 
-    /// Обработать покупку токена
+    /// Process token purchase
     fn process_buy_token(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         amount_in: u64,
         min_amount_out: u64,
     ) -> ProgramResult {
-        // Валидация входных параметров
+        // Validate input parameters
         if amount_in == 0 {
             msg!("Error: Amount in cannot be zero");
             return Err(AutoBuyerError::InvalidParameters.into());
@@ -46,10 +46,10 @@ impl Processor {
             return Err(AutoBuyerError::InvalidParameters.into());
         }
 
-        // Валидация аккаунтов
+        // Validate accounts
         Self::validate_accounts(accounts)?;
 
-        // Извлечение аккаунтов
+        // Extract accounts
         let user_account = &accounts[0];
         let source_token_account = &accounts[1];
         let _destination_token_account = &accounts[2]; // Fixed: prefixed with underscore
@@ -63,13 +63,18 @@ impl Processor {
         msg!("Amount in: {}", amount_in);
         msg!("Min amount out: {}", min_amount_out);
 
-        // Проверка баланса пользователя
-        Self::check_user_balance(source_token_account, amount_in, quote_mint.key(), user_account.key())?;
+        // Check user balance
+        Self::check_user_balance(
+            source_token_account,
+            amount_in,
+            quote_mint.key(),
+            user_account.key(),
+        )?;
 
-        // Создание менеджера DEX
+        // Create DEX manager
         let dex_manager = DexManager::new();
 
-        // Выполнение автоматического обмена
+        // Execute automatic swap
         let swap_result = dex_manager
             .execute_auto_swap(
                 program_id,
@@ -83,22 +88,22 @@ impl Processor {
                 msg!("Swap failed: {:?}", e);
             })?;
 
-        // Создание результата без времени (упрощенная версия)
+        // Create result without timestamp (simplified for compatibility)
         let result = BuyResult {
             success: true,
             amount_out: swap_result.amount_out,
             fee_paid: swap_result.fee_amount,
-            timestamp: 0, // Упрощено для совместимости
+            timestamp: 0, // Simplified for compatibility
         };
 
-        // Логирование результата
+        // Log transaction result
         Self::log_transaction_result(&result, &swap_result);
 
         msg!("Token purchase completed successfully");
         Ok(())
     }
 
-    /// Валидация переданных аккаунтов
+    /// Validate provided accounts
     fn validate_accounts(accounts: &[AccountInfo]) -> Result<(), AutoBuyerError> {
         if accounts.len() < 22 {
             msg!(
@@ -108,13 +113,13 @@ impl Processor {
             return Err(AutoBuyerError::InvalidParameters);
         }
 
-        // Проверка, что пользователь подписал транзакцию
+        // Check that user signed the transaction
         if !accounts[0].is_signer() {
             msg!("Error: User account must be signer");
             return Err(AutoBuyerError::InvalidParameters);
         }
 
-        // Проверка, что токеновые аккаунты принадлежат программе токенов
+        // Check that token accounts belong to token program
         let token_program = &constants::TOKEN_PROGRAM_ID;
 
         if accounts[1].owner() != token_program {
@@ -127,13 +132,13 @@ impl Processor {
             return Err(AutoBuyerError::InvalidAccountOwner);
         }
 
-        // Проверка программы токенов
+        // Verify token program
         if accounts[9].key() != token_program {
             msg!("Error: Invalid token program");
             return Err(AutoBuyerError::InvalidParameters);
         }
 
-        // Проверка Raydium программы
+        // Verify Raydium program
         if accounts[5].key() != &constants::RAYDIUM_V4_PROGRAM_ID {
             msg!("Error: Invalid Raydium program");
             return Err(AutoBuyerError::InvalidParameters);
@@ -142,7 +147,7 @@ impl Processor {
         Ok(())
     }
 
-    /// Проверка баланса пользователя
+    /// Check user token balance
     fn check_user_balance(
         source_account: &AccountInfo,
         required_amount: u64,
@@ -178,14 +183,18 @@ impl Processor {
         let amount = u64::from_le_bytes(amount_bytes);
 
         if amount < required_amount {
-            msg!("Insufficient balance: have {}, need {}", amount, required_amount);
+            msg!(
+                "Insufficient balance: have {}, need {}",
+                amount,
+                required_amount
+            );
             return Err(AutoBuyerError::InsufficientFunds);
         }
 
         Ok(())
     }
 
-    /// Логирование результата транзакции
+    /// Log transaction result
     fn log_transaction_result(
         result: &BuyResult,
         swap_calculation: &crate::state::SwapCalculation,
@@ -196,9 +205,17 @@ impl Processor {
         msg!("Fee Paid: {}", result.fee_paid);
         msg!("Timestamp: {}", result.timestamp);
         // price_per_unit is fixed-point scaled by 1e9
-        msg!("Price per Unit: {}.{:09}", swap_calculation.price_per_unit / 1_000_000_000, swap_calculation.price_per_unit % 1_000_000_000);
+        msg!(
+            "Price per Unit: {}.{:09}",
+            swap_calculation.price_per_unit / 1_000_000_000,
+            swap_calculation.price_per_unit % 1_000_000_000
+        );
         // slippage_bps is in basis points (10000 = 100%)
-        msg!("Slippage: {}.{:02}%", swap_calculation.slippage_bps / 100, swap_calculation.slippage_bps % 100);
+        msg!(
+            "Slippage: {}.{:02}%",
+            swap_calculation.slippage_bps / 100,
+            swap_calculation.slippage_bps % 100
+        );
         msg!("========================");
     }
 }

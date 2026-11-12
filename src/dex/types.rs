@@ -1,58 +1,58 @@
 use crate::state::{SwapCalculation, TradingPair};
 
-/// Поддерживаемые провайдеры DEX
+/// Supported DEX providers
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DexProvider {
     RaydiumV4,
-    // Можно добавить другие DEX в будущем
+    // Other DEXes can be added in the future
     // Orca,
     // Serum,
 }
 
-/// Параметры для выполнения обмена
+/// Parameters for executing a swap
 #[derive(Debug, Clone)]
 pub struct SwapParams {
-    /// Торговая пара
+    /// Trading pair
     #[allow(dead_code)]
     pub trading_pair: TradingPair,
-    /// Количество входного токена
+    /// Input token amount
     pub amount_in: u64,
-    /// Минимальное количество выходного токена
+    /// Minimum output token amount
     pub min_amount_out: u64,
-    /// Расчет обмена
+    /// Swap calculation
     pub calculation: SwapCalculation,
 }
 
-/// Информация о ликвидности пула
+/// Pool liquidity information
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PoolLiquidity {
-    /// Резерв токена A
+    /// Token A reserve
     pub reserve_a: u64,
-    /// Резерв токена B
+    /// Token B reserve
     pub reserve_b: u64,
-    /// Общее количество LP токенов
+    /// Total LP token supply
     pub total_supply: u64,
 }
 
-/// Результат поиска пула
+/// Pool search result
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PoolSearchResult {
-    /// Найденная торговая пара
+    /// Found trading pair
     pub trading_pair: TradingPair,
-    /// Информация о ликвидности
+    /// Liquidity information
     pub liquidity: PoolLiquidity,
-    /// Рейтинг пула (для выбора лучшего)
+    /// Pool score (for selecting best)
     pub score: f64,
 }
 
 impl PoolSearchResult {
-    /// Рассчитать рейтинг пула на основе ликвидности и других факторов
+    /// Calculate pool score based on liquidity and other factors
     #[allow(dead_code)]
     pub fn calculate_score(&mut self) {
-        // Простой алгоритм оценки: чем больше ликвидность, тем выше рейтинг
+        // Simple scoring algorithm: higher liquidity = higher score
         let total_liquidity = self
             .liquidity
             .reserve_a
@@ -60,4 +60,3 @@ impl PoolSearchResult {
         self.score = total_liquidity as f64;
     }
 }
-
