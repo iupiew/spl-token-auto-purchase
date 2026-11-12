@@ -22,17 +22,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Solana CLI (Agave v1.18.26)
-        run: |
-          sudo apt-get update && sudo apt-get install -y curl
-          for i in {1..3}; do
-            if sh -c "$(curl -sSfL https://release.anza.xyz/v1.18.26/install)"; then
-              break
-            fi
-            echo "Retry $i/3..."
-            sleep 15
-          done
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+      - name: Install Rust nightly with bpfel-unknown-unknown target
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          target: bpfel-unknown-unknown
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -45,12 +38,11 @@ jobs:
 
       - name: Build SBF
         run: |
-          rm -f Cargo.lock
-          cargo build-sbf --arch sbfv2
+          cargo build --target bpfel-unknown-unknown --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spl-token-auto-purchase-so
-          path: target/deploy/spl_token_auto_purchase.so
+          path: target/bpfel-unknown-unknown/release/spl_token_auto_purchase.so
           retention-days: 7
