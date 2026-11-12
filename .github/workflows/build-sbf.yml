@@ -10,6 +10,8 @@ on:
 jobs:
   build-sbf:
     runs-on: ubuntu-latest
+    container:
+      image: anzaxyz/agave:v2.0.0
     steps:
       - uses: actions/checkout@v4
 
@@ -22,27 +24,13 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Rust nightly with bpfel-unknown-unknown target
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          target: bpfel-unknown-unknown
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Build SBF
         run: |
-          cargo build --target bpfel-unknown-unknown --release
+          cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: spl-token-auto-purchase-so
-          path: target/bpfel-unknown-unknown/release/spl_token_auto_purchase.so
+          path: target/deploy/spl_token_auto_purchase.so
           retention-days: 7
