@@ -45,7 +45,9 @@ jobs:
 
       - name: Build SBF
         run: |
-          cargo build-sbf --arch sbfv2 -- --locked
+          # Remove Cargo.lock to force regeneration with platform tools cargo
+          rm -f Cargo.lock
+          cargo build-sbf --arch sbfv2
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
